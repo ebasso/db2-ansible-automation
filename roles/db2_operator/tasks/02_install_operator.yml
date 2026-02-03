@@ -1,0 +1,89 @@
+---
+# Install Db2 Operator
+# Note: IBM Catalog should already be installed via ibm_catalog role
+
+- name: Check if IBM Operator Catalog exists
+  kubernetes.core.k8s_info:
+    api_version: operators.coreos.com/v1alpha1
+    kind: CatalogSource
+    name: "{{ db2_operator_source }}"
+    namespace: openshift-marketplace
+  register: catalog_check
+  failed_when: false
+
+- name: Verify IBM Operator Catalog is available
+  ansible.builtin.assert:
+    that:
+      - catalog_check.resources is defined
+      - catalog_check.resources | length > 0
+    fail_msg: |
+      IBM Operator Catalog '{{ db2_operator_source }}' not found.
+      Please install it first using the ibm_catalog role.
+    success_msg: "IBM Operator Catalog '{{ db2_operator_source }}' is available"
+
+- name: Create operator namespace '{{ db2_operator_namespace }}'
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ db2_operator_namespace }}"
+        labels:
+          app.kubernetes.io/name: db2-operator
+
+- name: Create OperatorGroup for Db2 (AllNamespaces mode)
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: operators.coreos.com/v1
+      kind: OperatorGroup
+      metadata:
+        name: db2-operator-group
+        namespace: "{{ db2_operator_namespace }}"
+      spec:
+        targetNamespaces: []
+
+- name: Create Subscription for Db2 Operator
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: operators.coreos.com/v1alpha1
+      kind: Subscription
+      metadata:
+        name: ibm-db2uoperator
+        namespace: "{{ db2_operator_namespace }}"
+      spec:
+        channel: "{{ db2_operator_channel }}"
+        name: db2u-operator
+        source: "{{ db2_operator_source }}"
+        sourceNamespace: openshift-marketplace
+        installPlanApproval: Automatic
+
+- name: Wait for Db2 Operator to be installed
+  kubernetes.core.k8s_info:
+    api_version: operators.coreos.com/v1alpha1
+    kind: ClusterServiceVersion
+    namespace: "{{ db2_operator_namespace }}"
+  register: csv_status
+  until:
+    - csv_status.resources is defined
+    - csv_status.resources | length > 0
+    - csv_status.resources | selectattr('metadata.name', 'search', 'db2u-operator') | list | length > 0
+    - (csv_status.resources | selectattr('metadata.name', 'search', 'db2u-operator') | list | first).status.phase == "Succeeded"
+  retries: 60
+  delay: 10
+
+- name: Get installed Db2 Operator version
+  ansible.builtin.set_fact:
+    db2_operator_version: "{{ (csv_status.resources | selectattr('metadata.name', 'search', 'db2u-operator') | list | first).spec.version }}"
+
+- name: Display Db2 Operator installation status
+  ansible.builtin.debug:
+    msg:
+      - "Db2 Operator installed successfully"
+      - "  Namespace: {{ db2_operator_namespace }}"
+      - "  Version: {{ db2_operator_version }}"
+      - "  Channel: {{ db2_operator_channel }}"
+
+# Made with Bob

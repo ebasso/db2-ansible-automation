@@ -1,0 +1,25 @@
+---
+# Deploy Db2 instance using Db2uInstance CR
+
+- name: Display selected storage classes
+  ansible.builtin.debug:
+    msg:
+      - "Using storage classes for Db2:"
+      - "  RWO (data, logs, temp): {{ db2_storage_class_rwo }}"
+      - "  RWX (meta, backup, archive): {{ db2_storage_class_rwx }}"
+
+- name: Create Db2uInstance custom resource from template
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('template', 'db2uinstance.yml.j2') | from_yaml }}"
+
+- name: Display Db2 instance deployment status
+  ansible.builtin.debug:
+    msg:
+      - "Db2uInstance '{{ db2_instance_name }}' deployment initiated"
+      - "  Namespace: {{ db2_namespace }}"
+      - "  Version: {{ db2_version }}"
+      - "  Storage Class (RWO): {{ db2_storage_class_rwo }}"
+      - "  Storage Class (RWX): {{ db2_storage_class_rwx }}"
+
+# Made with Bob

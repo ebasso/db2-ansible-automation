@@ -1,0 +1,138 @@
+---
+# IBM Db2 Operator Deployment Configuration (using Db2uInstance CR)
+# -----------------------------------------------------------------------------
+
+# Entitlement
+# -----------------------------------------------------------------------------
+entitled_registry_key: "{{ lookup('env', 'ENTITLED_REGISTRY_KEY') }}"
+
+# Db2 Operator Configuration
+# -----------------------------------------------------------------------------
+# Note: The IBM Catalog should already be installed via ibm_catalog role
+db2_operator_namespace: "{{ lookup('env', 'DB2_OPERATOR_NAMESPACE') | default('ibm-common-services', true) }}"
+db2_operator_channel: "{{ lookup('env', 'DB2_OPERATOR_CHANNEL') | default('v110509.0', true) }}"
+db2_operator_source: "{{ lookup('env', 'DB2_OPERATOR_SOURCE') | default('ibm-operator-catalog', true) }}"
+
+# Db2 Instance Configuration
+# -----------------------------------------------------------------------------
+db2_instance_name: "{{ lookup('env', 'DB2_INSTANCE_NAME') | default('db2inst1', true) }}"
+db2_namespace: "{{ lookup('env', 'DB2_NAMESPACE') | default('db2u', true) }}"
+db2_version: "{{ lookup('env', 'DB2_VERSION') | default('s11.5.9.0-cn7', true) }}"
+
+# Database Configuration
+# -----------------------------------------------------------------------------
+db2_database_name: "{{ lookup('env', 'DB2_DATABASE_NAME') | default('BLUDB', true) }}"
+db2_database_territory: "{{ lookup('env', 'DB2_DATABASE_TERRITORY') | default('US', true) }}"
+db2_database_pagesize: "{{ lookup('env', 'DB2_DATABASE_PAGESIZE') | default('32768', true) }}"
+
+# Storage Configuration
+# -----------------------------------------------------------------------------
+storage_class_rwo: "{{ lookup('env', 'STORAGE_CLASS_RWO') | default('', true) }}"
+storage_class_rwx: "{{ lookup('env', 'STORAGE_CLASS_RWX') | default('', true) }}"
+db2_storage_class: "{{ lookup('env', 'DB2_STORAGE_CLASS') | default('', true) }}"
+db2_meta_storage_size: "{{ lookup('env', 'DB2_META_STORAGE_SIZE') | default('10Gi', true) }}"
+db2_data_storage_size: "{{ lookup('env', 'DB2_DATA_STORAGE_SIZE') | default('20Gi', true) }}"
+db2_backup_storage_size: "{{ lookup('env', 'DB2_BACKUP_STORAGE_SIZE') | default('20Gi', true) }}"
+db2_logs_storage_size: "{{ lookup('env', 'DB2_LOGS_STORAGE_SIZE') | default('20Gi', true) }}"
+db2_temp_storage_size: "{{ lookup('env', 'DB2_TEMP_STORAGE_SIZE') | default('20Gi', true) }}"
+
+# Storage Class Matrix
+# -----------------------------------------------------------------------------
+storage_class_matrix:
+  ibmcloud:
+    rwx: "ibmc-file-gold-gid"   # ReadWriteMany
+    rwx_nogid: "ibmc-file-gold" # ReadWriteMany no GID
+    rwo: "ibmc-block-gold"      # ReadWriteOnce
+    rom: ""                     # ReadOnlyMany
+    rwop: ""                    # ReadWriteOncePod
+  redhat:
+    rwx: "ocs-storagecluster-cephfs"
+    rwx_nogid: "ocs-storagecluster-cephfs"
+    rwo: "ocs-storagecluster-ceph-rbd"
+    rom: ""
+    rwop: ""
+  aws:
+    rwx: "efs"
+    rwx_nogid: "efs"
+    rwo: "gp2"
+    rom: ""
+    rwop: ""
+  azure:
+    rwx: "azurefile-premium"
+    rwx_nogid: "azurefile-premium"
+    rwo: "managed-premium"
+    rom: ""
+    rwop: ""
+  azure-csi:
+    rwx: "azurefile-csi"
+    rwx_nogid: "azurefile-csi"
+    rwo: "managed-csi"
+    rom: ""
+    rwop: ""
+  techzone:
+    rwx: "managed-nfs-storage"
+    rwx_nogid: "managed-nfs-storage"
+    rwo: "managed-nfs-storage"
+    rom: "managed-nfs-storage"
+    rwop: "managed-nfs-storage"
+  ibm-spectrum:
+    rwx: "scale-cnsa"
+    rwx_nogid: "scale-cnsa"
+    rwo: "scale-cnsa"
+    rom: "scale-cnsa"
+    rwop: "scale-cnsa"
+  ibm-fyre1:
+    rwx: "rook-cephfs"
+    rwx_nogid: "rook-cephfs"
+    rwo: "rook-ceph-block"
+    rom: ""
+    rwop: ""
+  ibm-fyre2:
+    rwx: "ocs-external-storagecluster-cephfs"
+    rwx_nogid: "ocs-external-storagecluster-cephfs"
+    rwo: "ocs-external-storagecluster-ceph-rbd"
+    rom: ""
+    rwop: ""
+  hpe-storage:
+    rwx: "hpe-nfs"
+    rwx_nogid: "hpe-nfs"
+    rwo: "hpe-nfs"
+    rom: ""
+    rwop: ""
+
+# Resource Configuration
+# -----------------------------------------------------------------------------
+db2_cpu_requests: "{{ lookup('env', 'DB2_CPU_REQUESTS') | default('1000m', true) }}"
+db2_cpu_limits: "{{ lookup('env', 'DB2_CPU_LIMITS') | default('2000m', true) }}"
+db2_memory_requests: "{{ lookup('env', 'DB2_MEMORY_REQUESTS') | default('4Gi', true) }}"
+db2_memory_limits: "{{ lookup('env', 'DB2_MEMORY_LIMITS') | default('8Gi', true) }}"
+
+# Credentials
+# -----------------------------------------------------------------------------
+db2_admin_password: "{{ lookup('env', 'DB2_ADMIN_PASSWORD') | default('passw0rd', true) }}"
+db2_instance_password: "{{ lookup('env', 'DB2_INSTANCE_PASSWORD') | default('passw0rd', true) }}"
+
+# License Configuration
+# -----------------------------------------------------------------------------
+db2_license_accept: true
+db2_license_model: "{{ lookup('env', 'DB2_LICENSE_MODEL') | default('BYOL', true) }}"  # BYOL or Virtual Processor Core
+
+# Advanced Configuration
+# -----------------------------------------------------------------------------
+db2_workload: "{{ lookup('env', 'DB2_WORKLOAD') | default('OLTP', true) }}"  # ANALYTICS, OLTP, or SAP
+db2_ssl_enabled: "{{ lookup('env', 'DB2_SSL_ENABLED') | default('false', true) | bool }}"
+db2_hadr_enabled: "{{ lookup('env', 'DB2_HADR_ENABLED') | default('false', true) | bool }}"
+
+# Database Configuration Parameters
+# -----------------------------------------------------------------------------
+db2_logarchmeth1: "{{ lookup('env', 'DB2_LOGARCHMETH1') | default('DISK:/mnt/logs/archive', true) }}"
+db2_logfilsiz: "{{ lookup('env', 'DB2_LOGFILSIZ') | default('16384', true) }}"
+db2_logsecond: "{{ lookup('env', 'DB2_LOGSECOND') | default('12', true) }}"
+
+# Internal Variables
+# -----------------------------------------------------------------------------
+my_workdir: /tmp
+db2_registry_secret: ibm-entitlement-key
+db2_instance_secret: db2-instance-secret
+
+# Made with Bob

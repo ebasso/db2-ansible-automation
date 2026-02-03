@@ -1,0 +1,12 @@
+---
+- name: Deploy IBM Db2 using Db2 Operator with BLU Acceleration
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  any_errors_fatal: true
+  roles:
+    - ibm_catalog
+    - db2_operator
+    #- db2_setup_bludb
+
+# Made with Bob

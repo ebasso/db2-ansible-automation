@@ -1,0 +1,91 @@
+---
+apiVersion: db2u.databases.ibm.com/v1
+kind: Db2uInstance
+metadata:
+  name: {{ db2_instance_name }}
+  namespace: {{ db2_namespace }}
+  labels:
+    app.kubernetes.io/name: db2
+    app.kubernetes.io/instance: {{ db2_instance_name }}
+    app.kubernetes.io/managed-by: ansible
+spec:
+  license:
+    accept: true
+  nodes: 1
+  version: {{ db2_version }}
+  account:
+    privileged: true
+    imagePullSecrets:
+      - {{ db2_registry_secret }}
+  environment:
+    authentication:
+      ldap:
+        enabled: false
+    databases:
+      - name: {{ db2_database_name }}
+        settings:
+          codeset: UTF-8
+    instance:
+      password:
+        secretName: {{ db2_instance_secret }}
+        secretKey: password
+      registry:
+        DB2_4K_DEVICE_SUPPORT: "ON"
+        DB2_ATS_ENABLE: "NO"
+        DB2_DISPATCHER_PEEKTIMEOUT: "2"
+        DB2_OBJECT_STORAGE_SETTINGS: "OFF"
+  storage:
+    - name: meta
+      type: create
+      spec:
+        accessModes:
+          - ReadWriteMany
+        resources:
+          requests:
+            storage: {{ db2_meta_storage_size }}
+        storageClassName: {{ db2_storage_class_rwx }}
+    - name: data
+      type: create
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: {{ db2_data_storage_size }}
+        storageClassName: {{ db2_storage_class_rwo }}
+    - name: backup
+      type: create
+      spec:
+        accessModes:
+          - ReadWriteMany
+        resources:
+          requests:
+            storage: {{ db2_backup_storage_size }}
+        storageClassName: {{ db2_storage_class_rwx }}
+    - name: activelogs
+      type: create
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: {{ db2_logs_storage_size }}
+        storageClassName: {{ db2_storage_class_rwo }}
+    - name: archivelogs
+      type: create
+      spec:
+        accessModes:
+          - ReadWriteMany
+        resources:
+          requests:
+            storage: {{ db2_logs_storage_size }}
+        storageClassName: {{ db2_storage_class_rwx }}
+    - name: tempts
+      type: create
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: {{ db2_temp_storage_size }}
+        storageClassName: {{ db2_storage_class_rwo }}

@@ -1,0 +1,27 @@
+---
+# Main tasks file for db2_operator role
+# This role deploys IBM Db2 instances using the Db2 Operator
+# Note: IBM Catalog should already be installed via ibm_catalog role
+
+- name: Check for required environment variables
+  ansible.builtin.include_tasks: 01_check_vars.yml
+
+- name: Install Db2 Operator
+  ansible.builtin.include_tasks: 02_install_operator.yml
+
+- name: Define storage classes
+  ansible.builtin.include_tasks: 03_define_storage.yml
+
+- name: Create namespace and secrets for Db2
+  ansible.builtin.include_tasks: 04_create_namespace_secrets.yml
+
+- name: Deploy Db2 instance
+  ansible.builtin.include_tasks: 05_deploy_db2_instance.yml
+
+- name: Wait for Db2 instance to be ready
+  ansible.builtin.include_tasks: 06_wait_for_ready.yml
+
+- name: Display deployment information
+  ansible.builtin.include_tasks: 07_display_info.yml
+
+# Made with Bob

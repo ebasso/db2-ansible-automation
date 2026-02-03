@@ -1,0 +1,68 @@
+---
+# Wait for Db2 instance to be ready
+
+- name: Wait for Db2uInstance to be ready
+  kubernetes.core.k8s_info:
+    api_version: db2u.databases.ibm.com/v1
+    kind: Db2uInstance
+    name: "{{ db2_instance_name }}"
+    namespace: "{{ db2_namespace }}"
+  register: db2_instance_status
+  until:
+    - db2_instance_status.resources is defined
+    - db2_instance_status.resources | length > 0
+    - db2_instance_status.resources[0].status is defined
+    - db2_instance_status.resources[0].status.state is defined
+    - db2_instance_status.resources[0].status.state == "Ready"
+  retries: 120
+  delay: 30
+  failed_when: false
+
+- name: Display current Db2 instance state
+  ansible.builtin.debug:
+    msg: "Db2 Instance State: {{ db2_instance_status.resources[0].status.state | default('Unknown') }}"
+  when:
+    - db2_instance_status.resources is defined
+    - db2_instance_status.resources | length > 0
+    - db2_instance_status.resources[0].status is defined
+
+- name: Check if Db2 instance is ready
+  ansible.builtin.assert:
+    that:
+      - db2_instance_status.resources is defined
+      - db2_instance_status.resources | length > 0
+      - db2_instance_status.resources[0].status is defined
+      - db2_instance_status.resources[0].status.state is defined
+      - db2_instance_status.resources[0].status.state == "Ready"
+    fail_msg: "Db2 instance did not reach Ready state. Current state: {{ db2_instance_status.resources[0].status.state | default('Unknown') if db2_instance_status.resources[0].status is defined else 'No status available' }}"
+    success_msg: "Db2 instance is Ready"
+
+- name: Wait for Db2 pods to be running
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Pod
+    namespace: "{{ db2_namespace }}"
+    label_selectors:
+      - "app={{ db2_instance_name }}"
+      - "role=db"
+  register: db2_pods
+  until:
+    - db2_pods.resources is defined
+    - db2_pods.resources | length > 0
+    - db2_pods.resources | selectattr('status.phase', 'equalto', 'Running') | list | length > 0
+  retries: 60
+  delay: 30
+
+- name: Get Db2 pod name
+  ansible.builtin.set_fact:
+    db2_pod_name: "{{ (db2_pods.resources | selectattr('status.phase', 'equalto', 'Running') | list | first).metadata.name }}"
+
+- name: Display Db2 pod status
+  ansible.builtin.debug:
+    msg:
+      - "Db2 instance is ready!"
+      - "  Pod name: {{ db2_pod_name }}"
+      - "  Namespace: {{ db2_namespace }}"
+      - "  State: Ready"
+
+# Made with Bob

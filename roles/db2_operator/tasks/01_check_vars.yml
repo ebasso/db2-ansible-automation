@@ -1,0 +1,54 @@
+---
+# Check required variables for Db2 Operator deployment
+
+- name: Validate required variables
+  ansible.builtin.assert:
+    that:
+      - entitled_registry_key is defined
+      - entitled_registry_key | length > 0
+      - db2_namespace is defined
+      - db2_namespace | length > 0
+      - db2_instance_name is defined
+      - db2_instance_name | length > 0
+    fail_msg: "Required variables are missing. Please set ENTITLED_REGISTRY_KEY, DB2_NAMESPACE, and DB2_INSTANCE_NAME"
+    success_msg: "All required variables are set"
+
+- name: Display Db2 deployment configuration
+  ansible.builtin.debug:
+    msg:
+      - "=========================================="
+      - "IBM Db2 Operator Deployment Configuration"
+      - "=========================================="
+      - ""
+      - "Operator Configuration:"
+      - "  Operator Namespace ......... {{ db2_operator_namespace }}"
+      - "  Operator Channel ........... {{ db2_operator_channel }}"
+      - "  Operator Source ............ {{ db2_operator_source }}"
+      - ""
+      - "Instance Configuration:"
+      - "  Instance Name .............. {{ db2_instance_name }}"
+      - "  Instance Namespace ......... {{ db2_namespace }}"
+      - "  Version .................... {{ db2_version }}"
+      - "  License Model .............. {{ db2_license_model }}"
+      - ""
+      - "Database Configuration:"
+      - "  Database Name .............. {{ db2_database_name }}"
+      - "  Workload ................... {{ db2_workload }}"
+      - ""
+      - "Storage Configuration:"
+      - "  Storage Class .............. {{ db2_storage_class if db2_storage_class else 'Auto-detect' }}"
+      - "  Meta Storage ............... {{ db2_meta_storage_size }}"
+      - "  Data Storage ............... {{ db2_data_storage_size }}"
+      - "  Backup Storage ............. {{ db2_backup_storage_size }}"
+      - "  Logs Storage ............... {{ db2_logs_storage_size }}"
+      - "  Temp Storage ............... {{ db2_temp_storage_size }}"
+      - ""
+      - "Resource Configuration:"
+      - "  CPU Requests ............... {{ db2_cpu_requests }}"
+      - "  CPU Limits ................. {{ db2_cpu_limits }}"
+      - "  Memory Requests ............ {{ db2_memory_requests }}"
+      - "  Memory Limits .............. {{ db2_memory_limits }}"
+      - ""
+      - "=========================================="
+
+# Made with Bob

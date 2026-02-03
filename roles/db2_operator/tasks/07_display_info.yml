@@ -1,0 +1,135 @@
+---
+# Display deployment information and create connection info file
+
+- name: Get Db2 service information
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Service
+    namespace: "{{ db2_namespace }}"
+    label_selectors:
+      - "app={{ db2_instance_name }}"
+  register: db2_services
+
+- name: Get Db2 service details
+  ansible.builtin.set_fact:
+    db2_service_name: "{{ (db2_services.resources | selectattr('spec.type', 'equalto', 'NodePort') | list | first).metadata.name if db2_services.resources | selectattr('spec.type', 'equalto', 'NodePort') | list | length > 0 else (db2_services.resources | first).metadata.name }}"
+    db2_service_port: "{{ (db2_services.resources | selectattr('spec.type', 'equalto', 'NodePort') | list | first).spec.ports[0].port if db2_services.resources | selectattr('spec.type', 'equalto', 'NodePort') | list | length > 0 else (db2_services.resources | first).spec.ports[0].port }}"
+  when: db2_services.resources | length > 0
+
+- name: Get Db2 routes (OpenShift)
+  kubernetes.core.k8s_info:
+    api_version: route.openshift.io/v1
+    kind: Route
+    namespace: "{{ db2_namespace }}"
+    label_selectors:
+      - "app={{ db2_instance_name }}"
+  register: db2_routes
+  failed_when: false
+
+- name: Set route information if available
+  ansible.builtin.set_fact:
+    db2_route_host: "{{ db2_routes.resources[0].spec.host }}"
+  when:
+    - db2_routes.resources is defined
+    - db2_routes.resources | length > 0
+
+- name: Display Db2 deployment information
+  ansible.builtin.debug:
+    msg:
+      - "=========================================="
+      - "IBM Db2 Instance Deployment Complete!"
+      - "=========================================="
+      - ""
+      - "Instance Details:"
+      - "  Name: {{ db2_instance_name }}"
+      - "  Namespace: {{ db2_namespace }}"
+      - "  Version: {{ db2_version }}"
+      - "  Workload: {{ db2_workload }}"
+      - ""
+      - "Connection Information:"
+      - "  Service: {{ db2_service_name | default('N/A') }}"
+      - "  Port: {{ db2_service_port | default('50000') }}"
+      - "  Pod: {{ db2_pod_name }}"
+      - "{% if db2_route_host is defined %}  Route: {{ db2_route_host }}{% endif %}"
+      - ""
+      - "Database:"
+      - "  Name: {{ db2_database_name }}"
+      - "  Territory: {{ db2_database_territory }}"
+      - ""
+      - "Credentials:"
+      - "  Instance User: db2inst1"
+      - "  Instance Password: (stored in secret {{ db2_instance_secret }})"
+      - ""
+      - "To connect from within the cluster:"
+      - "  kubectl exec -it {{ db2_pod_name }} -n {{ db2_namespace }} -- su - db2inst1"
+      - ""
+      - "To get the instance password:"
+      - "  kubectl get secret {{ db2_instance_secret }} -n {{ db2_namespace }} -o jsonpath='{.data.password}' | base64 -d"
+      - ""
+      - "To connect to the database:"
+      - "  kubectl exec -it {{ db2_pod_name }} -n {{ db2_namespace }} -- su - db2inst1 -c 'db2 connect to {{ db2_database_name }}'"
+      - ""
+      - "=========================================="
+
+- name: Create connection info file
+  ansible.builtin.copy:
+    content: |
+      # IBM Db2 Instance Information
+      # Generated: {{ ansible_date_time.iso8601 }}
+      
+      ## Instance Details
+      Instance Name: {{ db2_instance_name }}
+      Namespace: {{ db2_namespace }}
+      Version: {{ db2_version }}
+      Workload: {{ db2_workload }}
+      
+      ## Connection Information
+      Service: {{ db2_service_name | default('N/A') }}
+      Port: {{ db2_service_port | default('50000') }}
+      Pod: {{ db2_pod_name }}
+      {% if db2_route_host is defined %}Route: {{ db2_route_host }}{% endif %}
+      
+      ## Database
+      Name: {{ db2_database_name }}
+      Territory: {{ db2_database_territory }}
+      
+      ## Credentials
+      Instance User: db2inst1
+      Instance Password Secret: {{ db2_instance_secret }}
+      
+      ## Connection Commands
+      
+      ### Connect from within cluster:
+      kubectl exec -it {{ db2_pod_name }} -n {{ db2_namespace }} -- su - db2inst1
+      
+      ### Get password:
+      kubectl get secret {{ db2_instance_secret }} -n {{ db2_namespace }} -o jsonpath='{.data.password}' | base64 -d
+      
+      ### Connect to database:
+      kubectl exec -it {{ db2_pod_name }} -n {{ db2_namespace }} -- su - db2inst1 -c 'db2 connect to {{ db2_database_name }}'
+      
+      ### List databases:
+      kubectl exec -it {{ db2_pod_name }} -n {{ db2_namespace }} -- su - db2inst1 -c 'db2 list db directory'
+      
+      ## Storage Information
+      Storage Class: {{ db2_storage_class }}
+      Meta Storage: {{ db2_meta_storage_size }}
+      Data Storage: {{ db2_data_storage_size }}
+      Backup Storage: {{ db2_backup_storage_size }}
+      Logs Storage: {{ db2_logs_storage_size }}
+      Temp Storage: {{ db2_temp_storage_size }}
+      
+      ## Resource Allocation
+      CPU Requests: {{ db2_cpu_requests }}
+      CPU Limits: {{ db2_cpu_limits }}
+      Memory Requests: {{ db2_memory_requests }}
+      Memory Limits: {{ db2_memory_limits }}
+      
+    dest: "{{ my_workdir }}/db2_instance_info_{{ db2_instance_name }}.txt"
+    mode: '0644'
+
+- name: Display connection info file location
+  ansible.builtin.debug:
+    msg: "Instance information saved to: {{ my_workdir }}/db2_instance_info_{{ db2_instance_name }}.txt"
+
+# Made with Bob

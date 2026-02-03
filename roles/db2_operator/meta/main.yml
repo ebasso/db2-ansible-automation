@@ -1,0 +1,36 @@
+---
+galaxy_info:
+  author: IBM Sterling DevOps Team
+  description: Deploy IBM Db2 instances using the Db2 Operator on OpenShift/Kubernetes
+  company: IBM
+  license: Apache-2.0
+  min_ansible_version: "2.9"
+  
+  platforms:
+    - name: EL
+      versions:
+        - 8
+        - 9
+    - name: Fedora
+      versions:
+        - all
+    - name: Ubuntu
+      versions:
+        - focal
+        - jammy
+  
+  galaxy_tags:
+    - ibm
+    - db2
+    - database
+    - operator
+    - openshift
+    - kubernetes
+    - sterling
+    - devops
+
+dependencies:
+  - role: ibm_catalog
+    when: ibm_catalog_install | default(true)
+
+# Made with Bob
